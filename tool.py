@@ -23,12 +23,14 @@ It is a simple conversational bot
 
 user_input = get_text()
 model_invoked = get_model()
+should_generate = webapp.button('Generate Response')
 
-enc_inp, dec_inp, vocab_mapper = pre_process_input(user_input, model_invoked)
-response, masked_attn_weights, cross_attn_weights = generate_response(enc_inp, dec_inp, model_invoked, vocab_mapper)
+if should_generate:
+    enc_inp, dec_inp, vocab_mapper = pre_process_input(user_input, model_invoked)
+    response, masked_attn_weights, cross_attn_weights = generate_response(enc_inp, dec_inp, model_invoked, vocab_mapper)
 
-write_response(response)
+    write_response(response)
 
-if cross_attn_weights is not None:
-    cross_attn_chart = plot_attn_heatmap(cross_attn_weights, type='cross_attn', **{'prompt': user_input, 'response': response})
-    webapp.plotly_chart(cross_attn_chart)
+    if cross_attn_weights is not None:
+        cross_attn_chart = plot_attn_heatmap(cross_attn_weights, type='cross_attn', **{'prompt': user_input, 'response': response})
+        webapp.plotly_chart(cross_attn_chart)
