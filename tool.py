@@ -8,7 +8,7 @@ def get_text():
     return input_text 
 
 def get_model():
-    option = webapp.selectbox('Which model?', ('transformer-all-data', 'transformer-conv-ai', 'gru-pytorch', 'gpt-2'))
+    option = webapp.selectbox('Which model?', ('transformer-conv-ai', 'transformer-all-data', 'gru-pytorch', 'gpt-2'))
     return option
 
 def write_response(response):
