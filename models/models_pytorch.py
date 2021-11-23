@@ -52,7 +52,7 @@ class ConvModelT(nn.Module):
             pred_seq.append(prev_output)
             iter += 1
 
-        return pred_seq
+        return pred_seq, None, None
 
     def _create_masks(self, src, tgt=None):
         src_mask = torch.eq(src.to('cpu'), torch.zeros(src.size(), dtype=torch.float64)).to(device)

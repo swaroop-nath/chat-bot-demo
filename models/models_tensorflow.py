@@ -57,7 +57,7 @@ class MultiHeadAttention(keras.layers.Layer):
 
         outputs = tf.matmul(attn_weights, value)
         # Shape of outputs - (num_heads, seq_len, head_depth)
-        return outputs
+        return outputs, attn_weights
 
     def _split_head(self, data):
         '''
@@ -93,13 +93,13 @@ class MultiHeadAttention(keras.layers.Layer):
         key = self._split_head(key)
         value = self._split_head(value)
 
-        attn_output = self._scaled_dot_product_attention(query, key, value, mask) # (num_heads, seq_len, head_depth)
+        attn_output, attn_weights = self._scaled_dot_product_attention(query, key, value, mask) # (num_heads, seq_len, head_depth)
         attn_output = tf.transpose(attn_output, perm=[1, 0, 2]) # (seq_len, num_heads, head_depth)
         concatenated_attn = tf.reshape(attn_output, (-1, self.d_model)) # (seq_len, d_model)
 
         outputs = self.outputs(concatenated_attn) # (seq_len, d_model)
 
-        return outputs
+        return outputs, attn_weights
 
 class FeedForwardNetwork(keras.layers.Layer):
     def __init__(self, d_model, d_ff):
@@ -127,10 +127,10 @@ class EncoderLayer(keras.layers.Layer):
 
     def __call__(self, x, prev_key=None, prev_value=None):
         if prev_key == None:
-            attn_output = self.attn(x, x, x)
+            attn_output, _ = self.attn(x, x, x)
         else:
             # Where recurrence develops
-            attn_output = self.attn(x, prev_key, prev_value) # Based on the query, formed from previous encoding, and key and value from current input, attend to current input
+            attn_output, _ = self.attn(x, prev_key, prev_value) # Based on the query, formed from previous encoding, and key and value from current input, attend to current input
         
         norm_output = self.layer_norm_1(x + attn_output)
         ffn_output = self.ffn(norm_output)
@@ -150,14 +150,14 @@ class DecoderLayer(keras.layers.Layer):
         self.layer_norm_3 = keras.layers.LayerNormalization(epsilon=epsilon)
 
     def __call__(self, x, enc_output):
-        masked_attn_op = self.masked_attn(x, x, x, should_mask=True) # --> Problem in masking
+        masked_attn_op, masked_attn_weights = self.masked_attn(x, x, x, should_mask=True)
         norm_output_1 = self.layer_norm_1(masked_attn_op + x)
-        enc_dec_attn = self.enc_dec_attn(norm_output_1, enc_output, enc_output) # query comes from the half target output, and key value come from enc_output
+        enc_dec_attn, cross_attn_weights = self.enc_dec_attn(norm_output_1, enc_output, enc_output) # query comes from the half target output, and key value come from enc_output
         norm_output_2 = self.layer_norm_2(enc_dec_attn + norm_output_1)
         ffn_output = self.ffn(norm_output_2)
         norm_output_3 = self.layer_norm_3(ffn_output + norm_output_2)
 
-        return norm_output_3
+        return norm_output_3, masked_attn_weights, cross_attn_weights
 
 class Encoder(keras.layers.Layer):
     def __init__(self, num_layers, d_model, d_ff, num_heads, input_vocab_size):
@@ -202,11 +202,15 @@ class Decoder(keras.layers.Layer):
         pos_enc = np.array([self.pos_encoding(i+1, self.d_model) for i in range(seq_len)]) # --> (seq_len, d_model)
         x += pos_enc
 
+        masked_weights = []
+        cross_weights = []
         for decoder in self.decoders:
-            x = decoder(x, enc_output)
+            x, masked_attn_weights, cross_attn_weights = decoder(x, enc_output)
+            masked_weights.append(masked_attn_weights)
+            cross_weights.append(cross_attn_weights)
 
         outputs = self.final_layer(x) # --> (seq_len, output_vocab_size) -> outputs prob for each place
-        return outputs
+        return outputs, masked_weights[0], cross_weights[-1]
 
 class Transformer(keras.Model):
     def __init__(self, num_enc_layers, num_dec_layers, d_model, d_ff, num_heads, input_vocab_size, output_vocab_size):
@@ -221,11 +225,11 @@ class Transformer(keras.Model):
 
         enc_output = self.encoder(inp_sent)
 
-        dec_output = self.decoder.predict_once(tar_half_sent, enc_output)
+        dec_output, masked_attn_weights, cross_attn_weights = self.decoder.predict_once(tar_half_sent, enc_output)
         # returns probability for all the tokens in the window slid forward by 1 unit
         # thus, the tar real has to be the real tokens in the window slid by 1 unit
         # the probability on all the tokens in this window will be used for cross entropy computation
-        return dec_output 
+        return dec_output, masked_attn_weights, cross_attn_weights
 
     def predict(self, inp_sent, dec_prompt, stop_id, max_len=15):
         # inp_sent = list, dec_prompt = list
@@ -238,10 +242,10 @@ class Transformer(keras.Model):
 
         while prev_output != stop_id and iter <= max_len:
             inputs = (inp_sent, dec_prompt)
-            probs = tf.argmax(self.__call__(inputs), axis=-1).numpy() # (seq_len, )
+            dec_output, masked_attn_weights, cross_attn_weights = self.__call__(inputs)
+            probs = tf.argmax(dec_output, axis=-1).numpy() # (seq_len, )
             prev_output = probs[-1]
             dec_prompt = np.append(dec_prompt, prev_output).astype(np.int32)
             pred_seq.append(probs[-1])
 
-        print(pred_seq)
-        return pred_seq
+        return pred_seq, masked_attn_weights, np.around(tf.math.reduce_mean(cross_attn_weights, axis=0).numpy(), decimals=3)

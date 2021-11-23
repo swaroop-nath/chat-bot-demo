@@ -8,8 +8,8 @@ from models.models_tensorflow import Transformer
 
 def generate_response(enc_inp, dec_inp, model_invoked, vocab_mapper) -> str:
     model = load_model(model_invoked, vocab_size=len(vocab_mapper))
-    response = predict_response(enc_inp, dec_inp, model, vocab_mapper)
-    return post_process(response)
+    response, masked_attn_weights, cross_attn_weights = predict_response(enc_inp, dec_inp, model, vocab_mapper)
+    return post_process(response), masked_attn_weights, cross_attn_weights
 
 def load_model(model_invoked, vocab_size):
     config_mgr = ConfigManager()
@@ -54,12 +54,11 @@ def load_model(model_invoked, vocab_size):
     return model
 
 def predict_response(enc_inp, dec_inp, model, vocab_mapper) -> List[str]:
-    # TODO: predict the response
     inverse_vocab_mapper = {idx: word for word, idx in vocab_mapper.items()}
-    response = model.predict(enc_inp, dec_inp, stop_id=vocab_mapper['//END//'], max_len=15) # A list of token ids
+    response, masked_attn_weights, cross_attn_weights = model.predict(enc_inp, dec_inp, stop_id=vocab_mapper['//END//'], max_len=15) # A list of token ids
     response = [inverse_vocab_mapper[idx] for idx in response]
     
-    return response
+    return response, masked_attn_weights, cross_attn_weights
 
 def post_process(response) -> str:
     # TODO: post process the output
