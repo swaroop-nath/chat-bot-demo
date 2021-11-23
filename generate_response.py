@@ -31,8 +31,8 @@ def load_model(model_invoked, vocab_size):
             vocab_size=vocab_size,
             use_common_enc=use_common_enc
         )
-        model.eval()
         model = ckpt_mgr.load_ckpt(model)
+        model.eval()
 
     assert model is not None
     return model

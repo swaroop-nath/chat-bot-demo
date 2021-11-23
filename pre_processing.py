@@ -29,5 +29,5 @@ def tokenize_sent_and_map(input_sent, vocab_mapper, should_lower=True) -> List[i
     return input_sent
 
 def get_decoder_input(vocab_mapper) -> List[int]:
-    dec_prompt = [vocab_mapper['//END//']]
+    dec_prompt = [vocab_mapper['//START//']]
     return dec_prompt
