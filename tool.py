@@ -15,10 +15,10 @@ def write_response(response):
     webapp.header('Response')
     webapp.text(response)
 
-webapp.sidebar.title("NLP Bot")
+webapp.sidebar.title("CS626 Bot")
 webapp.title("""
-NLP Bot  
-NLP Bot is an NLP conversational chatterbot. 
+CS626 Bot 
+It is a simple conversational bot
 """)
 
 user_input = get_text()

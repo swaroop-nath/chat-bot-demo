@@ -62,4 +62,5 @@ def predict_response(enc_inp, dec_inp, model, vocab_mapper) -> List[str]:
 
 def post_process(response) -> str:
     # TODO: post process the output
+    if response[-1] == '//END//': return ' '.join(response[:-1])
     return ' '.join(response)
