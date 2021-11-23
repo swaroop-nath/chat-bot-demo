@@ -10,7 +10,7 @@ def get_text():
     return input_text 
 
 def get_model():
-    option = webapp.selectbox('Which model?', ('transfomer-all-data', 'transformer-conv-ai', 'gru-pytorch', 'gpt-2', 'model-dummy'))
+    option = webapp.selectbox('Which model?', ('transformer-all-data', 'transformer-conv-ai', 'gru-pytorch', 'gpt-2', 'model-dummy'))
     return option
 
 def write_response(response):

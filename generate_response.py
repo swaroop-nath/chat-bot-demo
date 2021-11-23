@@ -12,7 +12,7 @@ def load_model(model_invoked, vocab_size):
     config_mgr = ConfigManager()
     model_config = config_mgr.get_config(model_invoked)
     
-    if model_invoked in ['transfomer-all-data', 'model-dummy']:
+    if model_invoked in ['transformer-all-data', 'model-dummy']:
         use_common_enc = model_config['embedding'] == 'common'
         ckpt_path = './checkpoints/{}'
         model_name = 'transformer-no-ctxt'
