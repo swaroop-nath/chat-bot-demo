@@ -44,8 +44,6 @@ def tokenize_sent_and_map(input_sent, vocab_mapper, should_lower=True) -> List[i
 
     if should_lower: input_sent = input_sent.lower()
 
-    print(should_lower)
-
     input_sent = drop_unnecessary_items(input_sent, words_to_remove)
     input_sent = unroll_contractions(input_sent, contractions)
     input_sent = substitute_polymorphs(input_sent, word_polymorphs)
@@ -67,8 +65,9 @@ def unroll_contractions(sent, contractions):
     return sent
 
 def substitute_polymorphs(sent, polymorph_mapper):
-    for candidate, substitute in polymorph_mapper.items():
-        sent = re.sub(candidate, substitute, sent)
+    for _ in range(3):
+        for candidate, substitute in polymorph_mapper.items():
+            sent = re.sub(candidate, substitute, sent)
         
     return sent
 

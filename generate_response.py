@@ -6,9 +6,9 @@ import tensorflow as tf
 
 from models.models_tensorflow import Transformer
 
-def generate_response(enc_inp, dec_inp, model_invoked, vocab_mapper) -> str:
+def generate_response(enc_inp, dec_inp, model_invoked, vocab_mapper, temperature) -> str:
     model = load_model(model_invoked, vocab_size=len(vocab_mapper))
-    response, masked_attn_weights, cross_attn_weights = predict_response(enc_inp, dec_inp, model, vocab_mapper)
+    response, masked_attn_weights, cross_attn_weights = predict_response(enc_inp, dec_inp, model, vocab_mapper, temperature)
     return post_process(response), masked_attn_weights, cross_attn_weights
 
 def load_model(model_invoked, vocab_size):
@@ -53,9 +53,9 @@ def load_model(model_invoked, vocab_size):
     assert model is not None
     return model
 
-def predict_response(enc_inp, dec_inp, model, vocab_mapper) -> List[str]:
+def predict_response(enc_inp, dec_inp, model, vocab_mapper, temperature) -> List[str]:
     inverse_vocab_mapper = {idx: word for word, idx in vocab_mapper.items()}
-    response, masked_attn_weights, cross_attn_weights = model.predict(enc_inp, dec_inp, stop_id=vocab_mapper['//END//'], max_len=15) # A list of token ids
+    response, masked_attn_weights, cross_attn_weights = model.predict(enc_inp, dec_inp, stop_id=vocab_mapper['//END//'], temperature=temperature, max_len=15) # A list of token ids
     response = [inverse_vocab_mapper[idx] for idx in response]
     
     return response, masked_attn_weights, cross_attn_weights
