@@ -1,6 +1,6 @@
 import streamlit as webapp
 from pre_processing import pre_process_input
-from generate_response import generate_response
+from generate_response import generate_response, generate_response_gpt2
 from plots import plot_attn_heatmap
 
 def get_text():
@@ -27,8 +27,12 @@ should_generate = webapp.button('Generate Response')
 temp = webapp.slider('Temperature for sampling: ', 0.01, 1.25, 0.5)
 
 if should_generate:
-    enc_inp, dec_inp, vocab_mapper = pre_process_input(user_input, model_invoked)
-    response, masked_attn_weights, cross_attn_weights = generate_response(enc_inp, dec_inp, model_invoked, vocab_mapper, temp)
+    if model_invoked == 'gpt-2':
+        response = generate_response_gpt2(user_input, temp)
+        cross_attn_weights = None
+    else:
+        enc_inp, dec_inp, vocab_mapper = pre_process_input(user_input, model_invoked)
+        response, masked_attn_weights, cross_attn_weights = generate_response(enc_inp, dec_inp, model_invoked, vocab_mapper, temp)
 
     write_response(response)
 

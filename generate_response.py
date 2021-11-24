@@ -3,7 +3,11 @@ from models.models_pytorch import ConvModelT
 from models.config_manager import ConfigManager
 from models.ckpt_loaders import CKPTManagerPyTorch
 import tensorflow as tf
-
+try:
+    import gpt_2_simple as gpt2
+except:
+    print('No module gpt-2-simple')
+import streamlit as webapp
 from models.models_tensorflow import Transformer
 
 def generate_response(enc_inp, dec_inp, model_invoked, vocab_mapper, temperature) -> str:
@@ -59,6 +63,20 @@ def predict_response(enc_inp, dec_inp, model, vocab_mapper, temperature) -> List
     response = [inverse_vocab_mapper[idx] for idx in response]
     
     return response, masked_attn_weights, cross_attn_weights
+
+@webapp.cache
+def generate_response_gpt2(user_input, temp):
+    session = gpt2.start_tf_sess()
+    gpt2.load_gpt2(session, checkpoint_dir='checkpoints', run_name='gpt-2')
+    response = gpt2.generate(session, run_name='gpt-2', checkpoint_dir='checkpoints', include_prefix=False, prefix=user_input, nsamples=1,
+                        truncate="======================================\n", return_as_list=True, temperature=temp)    
+    cleaned_response = response[0].strip('. \n\t,')
+    # idx = 1
+    # while len(cleaned_response) == 0:
+    #     cleaned_response = response[idx].strip('. \n\t,')
+    #     idx += 1
+    return cleaned_response
+
 
 def post_process(response) -> str:
     # TODO: post process the output
