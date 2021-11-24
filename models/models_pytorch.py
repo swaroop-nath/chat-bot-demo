@@ -37,7 +37,7 @@ class ConvModelT(nn.Module):
 
         return logits
 
-    def predict(self, inp_sent, dec_prompt, stop_id, temperature, max_len=15):
+    def predict(self, inp_sent, dec_prompt, stop_id, temperature, use_greedy, max_len=15):
 
         inp_sent = torch.tensor([inp_sent], dtype=torch.int32).to(device) # (batch_size, 1)
         dec_prompt = torch.tensor([dec_prompt], dtype=torch.int32).to(device) # (batch_size, 1)
@@ -48,9 +48,13 @@ class ConvModelT(nn.Module):
 
         while prev_output != stop_id and iter <= max_len:
             logits = self.forward(inp_sent, dec_prompt) # (batch_size, seq_len, vocab_size)
-            logits[:, -1, :] = logits[:, -1, :]/temperature # Applying temp to the last word only
-            probs = torch.softmax(logits, dim=-1) # (batch_size, seq_len, vocab_size)
-            pred = torch.multinomial(probs[:, -1, :], num_samples=1)
+            if not use_greedy:
+                logits[:, -1, :] = logits[:, -1, :]/temperature # Applying temp to the last word only
+                probs = torch.softmax(logits, dim=-1) # (batch_size, seq_len, vocab_size)
+                pred = torch.multinomial(probs[:, -1, :], num_samples=1)
+            else:
+                pred = torch.argmax(logits, dim=-1) # (batch_size, seq_len)
+                pred = pred[:, -1]
             dec_prompt = torch.cat((dec_prompt, pred.view(-1, 1)), dim=-1)
             prev_output = pred.item()
             pred_seq.append(prev_output)

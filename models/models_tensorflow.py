@@ -231,7 +231,7 @@ class Transformer(keras.Model):
         # the probability on all the tokens in this window will be used for cross entropy computation
         return dec_output, masked_attn_weights, cross_attn_weights
 
-    def predict(self, inp_sent, dec_prompt, stop_id, temperature, max_len=15):
+    def predict(self, inp_sent, dec_prompt, stop_id, temperature, use_greedy, max_len=15):
         # inp_sent = list, dec_prompt = list
         inp_sent = np.array(inp_sent)
         dec_prompt = np.asarray(dec_prompt)
@@ -243,9 +243,13 @@ class Transformer(keras.Model):
         while prev_output != stop_id and iter <= max_len:
             inputs = (inp_sent, dec_prompt)
             dec_output, masked_attn_weights, cross_attn_weights = self.__call__(inputs)
-            dec_output = dec_output.numpy() # Can't do this!
-            probs = self.apply_temp(dec_output[-1, :], temperature)
-            pred = np.argmax(np.random.multinomial(1, probs, 1))
+            if not use_greedy:
+                dec_output = dec_output.numpy() # Can't do this!
+                probs = self.apply_temp(dec_output[-1, :], temperature)
+                pred = np.argmax(np.random.multinomial(1, probs, 1))
+            else:
+                pred = tf.argmax(dec_output, axis=-1).numpy() # (seq_len, )
+                pred = pred[-1]
             prev_output = pred
             dec_prompt = np.append(dec_prompt, prev_output).astype(np.int32)
             pred_seq.append(pred)
@@ -255,6 +259,8 @@ class Transformer(keras.Model):
 
     def apply_temp(self, probs, temp):
         # return probs
+        eps = 1e-5
         mod_logits = tf.math.log(probs)/temp
         mod_probs = tf.math.exp(mod_logits)
-        return mod_probs / tf.math.reduce_sum(mod_probs)
+        probs = mod_probs / (tf.math.reduce_sum(mod_probs) + eps)
+        return probs
